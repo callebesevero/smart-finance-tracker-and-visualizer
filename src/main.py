@@ -1,45 +1,55 @@
 import pandas as pd
+import plotly.express as px
+import functions
 
 df = pd.read_csv('./database/expense_data_1.csv')
 df = df[['Date', 'Category', 'INR', 'Income/Expense']]
 
-for i, d in enumerate(df['Date']):
-    d = str(d)
-    # Get the index after and before the date
+df['Day'] = ''
+df['Month'] = ''
+df['Year'] = ''
 
-    # 23/01/2026 - 00:00:00
-    # 00:00:00 - 23/01/2026
-    print(f'== {d} ==')
-
-    after_index = d.index('/')
-    before_index = d.index('/', after_index+1)
-
-    print(after_index)
-    print(before_index)
-
-    df.at[i, 'Date'] = d[0:-5].strip()
+datetype = 'mm/dd/yyyy'
+for i, date in enumerate(df['Date']):
+    date = str(date)
     
-    day = ''
-    month = ''
-    year = ''
+    dmy = functions.date_format(date, datetype)
 
-    bar_count = 0
-    for caractere in df['Date'][i]:
-        if caractere != '/':
-            if bar_count == 0:
-                month += caractere
-            elif bar_count == 1:
-                day += caractere
-            else:
-                year += caractere
-        else:
-            bar_count += 1
+    date = f'{dmy[0]}/{dmy[1]}/{dmy[2]}'
+
+    df.at[i, 'Date'] = date
     
-    if len(day) == 1:
-        day = f'0{day}'
-    if len(month) == 1:
-        month = f'0{month}'
-    if len(year) != 4:
-        print('YEAR_ERROR')
-    
-    df.at[i, 'Date'] = f'{day}/{month}/{year}'
+    df.at[i, 'Day'] = dmy[0]
+    df.at[i, 'Month'] = dmy[1]
+    df.at[i, 'Year'] = dmy[2]
+
+# Calculating total expenses
+total_expenses = df.loc[df['Income/Expense'] == 'Expense']['INR'].sum()
+
+# Calculate daily expenses average
+expenses_count = df.value_counts(df['Income/Expense'])['Expense']
+
+expenses_daily_average = total_expenses / expenses_count
+
+# Daily expenses chart
+dfdate = df[['Date', 'Day', 'Month', 'Year', 'INR']].groupby(['Day', 'Month', 'Year', 'Date'])['INR'].sum().reset_index()
+
+dfdate = dfdate.sort_values(['Year', 'Month', 'Day']).reset_index(drop='index')
+
+chart = px.histogram(dfdate, x='Date', y='INR', text_auto=True)
+chart.show()
+
+# Expenses x Incomes
+chart = px.pie(df, names='Income/Expense', title='Expenses x Incomes', values='INR')
+chart.show()
+
+# Category that people much expense
+dfcategory_expense = df.drop(df[df['Income/Expense'] == 'Income'].index).reset_index(drop='index')
+dfcategory_expense = dfcategory_expense[['Category', 'INR']]
+dfcategory_expense = dfcategory_expense.groupby('Category').sum()
+dfcategory_expense = dfcategory_expense.sort_values('INR', ascending=False)
+
+category_expense = f'The most invested category is {dfcategory_expense.iloc[0].name} and the expense is {dfcategory_expense.iat[0, 0]}'
+
+# Invested categories
+print(dfcategory_expense)
