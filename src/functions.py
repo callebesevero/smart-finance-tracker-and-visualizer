@@ -23,3 +23,10 @@ def date_format(date, datetype):
     if len(month) == 1:
         month = '0' + month
     return [day, month, year]
+
+
+def exibition_format(
+        text: str,
+        currency: str = 'R$'
+):
+    return f'{currency} {text:.2f}'
