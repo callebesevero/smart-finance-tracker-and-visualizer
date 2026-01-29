@@ -1,4 +1,4 @@
-def date_format(date, datetype):
+def format_date(date, datetype):
     date = date.split()
 
     for part in date:

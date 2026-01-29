@@ -3,68 +3,86 @@ import plotly.express as px
 import functions as f
 import streamlit as st
 
-st.title('Finance manager', text_alignment='center', )
+if 'button_validator' not in st.session_state:
+    st.session_state.button_validator = False
 
-finance_database = st.file_uploader(label='Upload your csv finance file', type='csv')
-date_format = st.selectbox('Choose the file date format', options=['dd/mm/yyyy', 'mm/dd/yyyy'])
+st.title('Finance manager', text_alignment='center', anchor=False)
 
-df = pd.read_csv(finance_database)
-df = df[['Date', 'Category', 'INR', 'Income/Expense']]
+if not st.session_state.button_validator:
+    finance_database = st.file_uploader(label='Upload your csv finance file', type='csv')
+    date_format = st.selectbox(
+        'Choose the file date format', 
+        options=['dd/mm/yyyy', 'mm/dd/yyyy'],
+        index=None,
+        placeholder='Choose the file date format'
+    )
 
-df['Day'] = ''
-df['Month'] = ''
-df['Year'] = ''
+    if st.button('Continue'):
+        if finance_database is not None and date_format is not None:
+            st.session_state.finance_database = finance_database
+            st.session_state.date_format = date_format
+            st.session_state.button_validator = True
+            st.rerun()
+        else:
+            st.error('Please upload a file and choose a date format')
+else:
+    df = pd.read_csv(st.session_state.finance_database)
+    df = df[['Date', 'Category', 'INR', 'Income/Expense']]
 
-for i, date in enumerate(df['Date']):
-    date = str(date)
-    dmy = f.date_format(date, date_format)
+    df['Day'] = ''
+    df['Month'] = ''
+    df['Year'] = ''
 
-    date = f'{dmy[0]}/{dmy[1]}/{dmy[2]}'
-    df.at[i, 'Date'] = date
-    
-    df.at[i, 'Day'] = dmy[0]
-    df.at[i, 'Month'] = dmy[1]
-    df.at[i, 'Year'] = dmy[2]
+    for i, date in enumerate(df['Date']):
+        date = str(date)
+        dmy = f.format_date(date, st.session_state.date_format)
 
-# Calculating total expenses
-total_expenses = df.loc[df['Income/Expense'] == 'Expense']['INR'].sum()
+        date = f'{dmy[0]}/{dmy[1]}/{dmy[2]}'
+        df.at[i, 'Date'] = date
+        
+        df.at[i, 'Day'] = dmy[0]
+        df.at[i, 'Month'] = dmy[1]
+        df.at[i, 'Year'] = dmy[2]
 
-# Calculate daily expenses average
-expenses_count = df.value_counts(df['Income/Expense'])['Expense']
-expenses_daily_average = total_expenses / expenses_count
+    # Calculating total expenses
+    total_expenses = df.loc[df['Income/Expense'] == 'Expense']['INR'].sum()
 
-# Daily expenses chart
-dfdate = df[['Date', 'Day', 'Month', 'Year', 'INR']].groupby(['Day', 'Month', 'Year', 'Date'])['INR'].sum().reset_index()
-dfdate = dfdate.sort_values(['Year', 'Month', 'Day']).reset_index(drop='index')
-chart_daily_expenses = px.histogram(dfdate, title='Daily expenses', x='Date', y='INR', text_auto=True)
+    # Calculate daily expenses average
+    expenses_count = df.value_counts(df['Income/Expense'])['Expense']
+    expenses_daily_average = total_expenses / expenses_count
 
-# Incomes X Expenses
-chart_incomes_expenses = px.pie(df, names='Income/Expense', title='Expenses x Incomes', values='INR')
+    # Daily expenses chart
+    dfdate = df[['Date', 'Day', 'Month', 'Year', 'INR']].groupby(['Day', 'Month', 'Year', 'Date'])['INR'].sum().reset_index()
+    dfdate = dfdate.sort_values(['Year', 'Month', 'Day']).reset_index(drop='index')
+    chart_daily_expenses = px.histogram(dfdate, title='Daily expenses', x='Date', y='INR', text_auto=True)
 
-# Invested categories
-dfcategory_expense = df.drop(df[df['Income/Expense'] == 'Income'].index).reset_index(drop='index')
-dfcategory_expense = dfcategory_expense[['Category', 'INR']]
-dfcategory_expense = dfcategory_expense.groupby('Category').sum()
-dfcategory_expense = dfcategory_expense.sort_values('INR', ascending=False)
+    # Incomes X Expenses
+    chart_incomes_expenses = px.pie(df, names='Income/Expense', title='Expenses x Incomes', values='INR')
 
-container_total_money = st.container(border=True)
-container_total_money.caption('The total volume of transactions', text_alignment='center')
-container_total_money.header(f.exibition_format(total_expenses), anchor=False, text_alignment='center')
-container_total_money.divider()
-container_total_money.caption('Average of transaction volume/total days', text_alignment='center')
-container_total_money.subheader(f.exibition_format(expenses_daily_average), text_alignment='center')
+    # Invested categories
+    dfcategory_expense = df.drop(df[df['Income/Expense'] == 'Income'].index).reset_index(drop='index')
+    dfcategory_expense = dfcategory_expense[['Category', 'INR']]
+    dfcategory_expense = dfcategory_expense.groupby('Category').sum()
+    dfcategory_expense = dfcategory_expense.sort_values('INR', ascending=False)
 
-st.space('large')
+    container_total_money = st.container(border=True)
+    container_total_money.caption('The total volume of transactions', text_alignment='center')
+    container_total_money.header(f.exibition_format(total_expenses), anchor=False, text_alignment='center')
+    container_total_money.divider()
+    container_total_money.caption('Average of transaction volume/total days', text_alignment='center')
+    container_total_money.subheader(f.exibition_format(expenses_daily_average), text_alignment='center')
 
-tab1, tab2 = st.tabs(tabs=['Daily expenses', 'Expenses X Incomes'])
-with tab1:
-    st.plotly_chart(chart_daily_expenses)
-with tab2:
-    st.plotly_chart(chart_incomes_expenses)
+    st.space('large')
 
-st.space('large')
+    tab1, tab2 = st.tabs(tabs=['Daily expenses', 'Expenses X Incomes'])
+    with tab1:
+        st.plotly_chart(chart_daily_expenses)
+    with tab2:
+        st.plotly_chart(chart_incomes_expenses)
 
-st.dataframe(
-    dfcategory_expense, 
-    width='stretch'
-)
+    st.space('large')
+
+    st.dataframe(
+        dfcategory_expense, 
+        width='stretch'
+    )
