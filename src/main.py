@@ -19,14 +19,14 @@ if not st.session_state.button_validator:
 
     if st.button('Continue'):
         if finance_database is not None and date_format is not None:
-            st.session_state.finance_database = finance_database
+            st.session_state.df = pd.read_csv(finance_database)
             st.session_state.date_format = date_format
             st.session_state.button_validator = True
             st.rerun()
         else:
             st.error('Please upload a file and choose a date format')
 else:
-    df = pd.read_csv(st.session_state.finance_database)
+    df = st.session_state.df
     df = df[['Date', 'Category', 'INR', 'Income/Expense']]
 
     df['Day'] = ''
@@ -70,7 +70,7 @@ else:
     container_total_money.header(f.exibition_format(total_expenses), anchor=False, text_alignment='center')
     container_total_money.divider()
     container_total_money.caption('Average of transaction volume/total days', text_alignment='center')
-    container_total_money.subheader(f.exibition_format(expenses_daily_average), text_alignment='center')
+    container_total_money.subheader(f.exibition_format(expenses_daily_average), anchor=False, text_alignment='center')
 
     st.space('large')
 
@@ -86,3 +86,13 @@ else:
         dfcategory_expense, 
         width='stretch'
     )
+
+    st.space('large')
+
+    if st.button('Analyze next'):
+        st.session_state.button_validator = False
+
+        if 'df' in st.session_state:
+            del st.session_state.df
+
+        st.rerun()
