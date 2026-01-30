@@ -44,6 +44,8 @@ else:
         df['Income/Expense'] = is_income.map({True: 'I', False: 'E'})
 
         df['Valor'] = df['Valor'].str.replace('C', '', regex=False).str.replace('D', '', regex=False)
+        df['Valor'] = df['Valor'].str.replace('.', '')
+        df['Valor'] = df['Valor'].astype(float) / 100
 
         df = df.drop(columns=['Histórico/Complemento', 'Favorecido'])
 
