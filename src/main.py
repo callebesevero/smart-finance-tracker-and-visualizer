@@ -16,23 +16,49 @@ if not st.session_state.button_validator:
         index=None,
         placeholder='Choose the file date format'
     )
+    bank = st.selectbox(
+        'Choose your bank',
+        options=['Caixa', 'Developer option'],
+        index=None,
+        placeholder='Choose the file date format'
+    )
 
     if st.button('Continue'):
-        if finance_database is not None and date_format is not None:
+        if finance_database is not None and date_format is not None and bank is not None:
             st.session_state.df = pd.read_csv(finance_database)
             st.session_state.date_format = date_format
+            st.session_state.bank = bank
             st.session_state.button_validator = True
             st.rerun()
         else:
             st.error('Please upload a file and choose a date format')
 else:
     df = st.session_state.df
-    df = df[['Date', 'Category', 'INR', 'Income/Expense']]
+
+    if st.session_state.bank == 'Caixa':
+        df = df[['Data', 'Histórico/Complemento', 'Favorecido', 'Valor']]
+
+        df['Category'] = df['Histórico/Complemento'].astype(str) + '-' + df['Favorecido'].astype(str)
+
+        is_income = df['Valor'].str.contains('C', na=False)
+        df['Income/Expense'] = is_income.map({True: 'I', False: 'E'})
+
+        df['Valor'] = df['Valor'].str.replace('C', '', regex=False).str.replace('D', '', regex=False)
+
+        df = df.drop(columns=['Histórico/Complemento', 'Favorecido'])
+
+        df = df.rename(columns={'Data': 'Date', 'Valor': 'Value'})
+    elif st.session_state.bank == 'Developer option':
+        df = df[['Date', 'Category', 'INR', 'Income/Expense']]
+
+        df['Income/Expense'] = df['Income/Expense'].replace('Income', 'I')
+        df['Income/Expense'] = df['Income/Expense'].replace('Expense', 'E')
+
+        df = df.rename(columns={'INR': 'Value'})
 
     df['Day'] = ''
     df['Month'] = ''
     df['Year'] = ''
-
     for i, date in enumerate(df['Date']):
         date = str(date)
         dmy = f.format_date(date, st.session_state.date_format)
@@ -45,25 +71,25 @@ else:
         df.at[i, 'Year'] = dmy[2]
 
     # Calculating total expenses
-    total_expenses = df.loc[df['Income/Expense'] == 'Expense']['INR'].sum()
+    total_expenses = df.loc[df['Income/Expense'] == 'E']['Value'].sum()
 
     # Calculate daily expenses average
-    expenses_count = df.value_counts(df['Income/Expense'])['Expense']
+    expenses_count = df.value_counts(df['Income/Expense'])['E']
     expenses_daily_average = total_expenses / expenses_count
 
     # Daily expenses chart
-    dfdate = df[['Date', 'Day', 'Month', 'Year', 'INR']].groupby(['Day', 'Month', 'Year', 'Date'])['INR'].sum().reset_index()
+    dfdate = df[['Date', 'Day', 'Month', 'Year', 'Value']].groupby(['Day', 'Month', 'Year', 'Date'])['Value'].sum().reset_index()
     dfdate = dfdate.sort_values(['Year', 'Month', 'Day']).reset_index(drop='index')
-    chart_daily_expenses = px.histogram(dfdate, title='Daily expenses', x='Date', y='INR', text_auto=True)
+    chart_daily_expenses = px.histogram(dfdate, title='Daily expenses', x='Date', y='Value', text_auto=True)
 
     # Incomes X Expenses
-    chart_incomes_expenses = px.pie(df, names='Income/Expense', title='Expenses x Incomes', values='INR')
+    chart_incomes_expenses = px.pie(df, names='Income/Expense', title='Expenses x Incomes', values='Value')
 
     # Invested categories
-    dfcategory_expense = df.drop(df[df['Income/Expense'] == 'Income'].index).reset_index(drop='index')
-    dfcategory_expense = dfcategory_expense[['Category', 'INR']]
+    dfcategory_expense = df.drop(df[df['Income/Expense'] == 'I'].index).reset_index(drop='index')
+    dfcategory_expense = dfcategory_expense[['Category', 'Value']]
     dfcategory_expense = dfcategory_expense.groupby('Category').sum()
-    dfcategory_expense = dfcategory_expense.sort_values('INR', ascending=False)
+    dfcategory_expense = dfcategory_expense.sort_values('Value', ascending=False)
 
     container_total_money = st.container(border=True)
     container_total_money.caption('The total volume of transactions', text_alignment='center')
