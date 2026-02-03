@@ -25,8 +25,8 @@ def format_date(date, datetype):
     return [day, month, year]
 
 
-def exibition_format(
-        text: str,
+def exhibition_format(
+        text: float | int, 
         currency: str = 'R$'
 ):
     return f'{currency} {text:.2f}'

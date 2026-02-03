@@ -38,7 +38,7 @@ else:
     if st.session_state.bank == 'Caixa':
         df = df[['Data', 'Histórico/Complemento', 'Favorecido', 'Valor']]
 
-        df['Category'] = df['Histórico/Complemento'].astype(str) + '-' + df['Favorecido'].astype(str)
+        df['Category'] = df['Favorecido'].astype(str)
 
         is_income = df['Valor'].str.contains('C', na=False)
         df['Income/Expense'] = is_income.map({True: 'I', False: 'E'})
@@ -92,16 +92,20 @@ else:
     dfcategory_expense = dfcategory_expense[['Category', 'Value']]
     dfcategory_expense = dfcategory_expense.groupby('Category').sum()
     dfcategory_expense = dfcategory_expense.sort_values('Value', ascending=False)
+    # Threating values to exhibition
+    dfcategory_expense = dfcategory_expense['Value'].apply(lambda x: f.exhibition_format(x))
 
+    # Exhibit
     container_total_money = st.container(border=True)
     container_total_money.caption('The total volume of transactions', text_alignment='center')
-    container_total_money.header(f.exibition_format(total_expenses), anchor=False, text_alignment='center')
+    container_total_money.header(f.exhibition_format(total_expenses), anchor=False, text_alignment='center')
     container_total_money.divider()
     container_total_money.caption('Average of transaction volume/total days', text_alignment='center')
-    container_total_money.subheader(f.exibition_format(expenses_daily_average), anchor=False, text_alignment='center')
+    container_total_money.subheader(f.exhibition_format(expenses_daily_average), anchor=False, text_alignment='center')
 
     st.space('large')
 
+    st.subheader('Charts', text_alignment='center')
     tab1, tab2 = st.tabs(tabs=['Daily expenses', 'Expenses X Incomes'])
     with tab1:
         st.plotly_chart(chart_daily_expenses)
@@ -110,6 +114,7 @@ else:
 
     st.space('large')
 
+    st.subheader('Most spent categories', text_alignment='center')
     st.dataframe(
         dfcategory_expense, 
         width='stretch'
