@@ -9,7 +9,7 @@ if 'button_validator' not in st.session_state:
 st.title('Finance manager', text_alignment='center', anchor=False)
 
 if not st.session_state.button_validator:
-    finance_database = st.file_uploader(label='Upload your csv finance file', type='csv')
+    finance_database = st.file_uploader(label="Upload your csv finance file (if it's a pdf file, we will convert to csv)", type=['csv', 'pdf'])
     date_format = st.selectbox(
         'Choose the file date format', 
         options=['dd/mm/yyyy', 'mm/dd/yyyy'],
@@ -25,6 +25,9 @@ if not st.session_state.button_validator:
 
     if st.button('Continue'):
         if finance_database is not None and date_format is not None and bank is not None:
+            # if finance_database.type == 'application/pdf':
+            #     finance_database = ...
+            
             st.session_state.df = pd.read_csv(finance_database)
             st.session_state.date_format = date_format
             st.session_state.bank = bank
