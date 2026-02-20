@@ -3,6 +3,7 @@ import plotly.express as px
 import functions as f
 import streamlit as st
 from pdf_to_csv_converter import converter
+import io
 
 if 'button_validator' not in st.session_state:
     st.session_state.button_validator = False
@@ -30,9 +31,10 @@ if not st.session_state.button_validator:
         if finance_database is not None and date_format is not None and bank is not None:
             # convert pdf to csv file
             if finance_database.type == 'application/pdf':
-                finance_database = converter.main(finance_database)
+                finance_database = io.StringIO(converter.main(finance_database))
 
             st.session_state.df = pd.read_csv(finance_database)
+            print(st.session_state.df)
             st.session_state.date_format = date_format
             st.session_state.bank = bank
             st.session_state.button_validator = True

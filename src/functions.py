@@ -34,14 +34,28 @@ def exhibition_format(
 
 def bank_format(df, bank):
     if bank == 'Caixa':
-        is_income = df['Valor'].str.contains('C', na=False)
-        df['Income/Expense'] = is_income.map({True: 'I', False: 'E'})
+        # Caixa has a different statements types
+        # first type
+        if 'Favorecido' in df:
+            is_income = df['Valor'].str.contains('C', na=False)
+            df['Income/Expense'] = is_income.map({True: 'I', False: 'E'})
 
-        df = df.rename(columns={'Data': 'Date', 'Valor': 'Value', 'Favorecido': 'Category'})
+            df = df.rename(columns={'Data': 'Date', 'Valor': 'Value', 'Favorecido': 'Category'})
 
-        df['Value'] = df['Value'].str.replace('C', '', regex=False).str.replace('D', '', regex=False)
-        df['Value'] = df['Value'].str.replace('.', '')
-        df['Value'] = df['Value'].astype(float) / 100
+            df['Value'] = df['Value'].str.replace('C', '', regex=False).str.replace('D', '', regex=False)
+            df['Value'] = df['Value'].str.replace('.', '')
+            df['Value'] = df['Value'].astype(float) / 100
+        # Second type
+        elif 'Data Mov.' in df:
+            is_income = df['Valor'].str.contains('C', na=False)
+            df['Income/Expense'] = is_income.map({True: 'I', False: 'E'})
+
+            df = df.rename(columns={'Data Mov.': 'Date', 'Histórico': 'Category', 'Valor': 'Value'})
+
+            df['Value'] = df['Value'].str.replace('C', '', regex=False).str.replace('D', '', regex=False)
+            df['Value'] = df['Value'].str.replace('.', '')
+            df['Value'] = df['Value'].astype(float) / 100
+
     elif bank == 'Developer option':
         df['Income/Expense'] = df['Income/Expense'].replace('Income', 'I')
         df['Income/Expense'] = df['Income/Expense'].replace('Expense', 'E')
