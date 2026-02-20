@@ -30,3 +30,21 @@ def exhibition_format(
         currency: str = 'R$'
 ):
     return f'{currency} {text:.2f}'
+
+
+def bank_format(df, bank):
+    if bank == 'Caixa':
+        is_income = df['Valor'].str.contains('C', na=False)
+        df['Income/Expense'] = is_income.map({True: 'I', False: 'E'})
+
+        df = df.rename(columns={'Data': 'Date', 'Valor': 'Value', 'Favorecido': 'Category'})
+
+        df['Value'] = df['Value'].str.replace('C', '', regex=False).str.replace('D', '', regex=False)
+        df['Value'] = df['Value'].str.replace('.', '')
+        df['Value'] = df['Value'].astype(float) / 100
+    elif bank == 'Developer option':
+        df['Income/Expense'] = df['Income/Expense'].replace('Income', 'I')
+        df['Income/Expense'] = df['Income/Expense'].replace('Expense', 'E')
+
+        df = df.rename(columns={'INR': 'Value'})
+    return df

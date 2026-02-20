@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.express as px
 import functions as f
 import streamlit as st
-from pdf_to_csv_converter.converter import main
+from pdf_to_csv_converter import converter
 
 if 'button_validator' not in st.session_state:
     st.session_state.button_validator = False
@@ -28,9 +28,9 @@ if not st.session_state.button_validator:
     if st.button('Continue'):
         # test if all fields are filled in
         if finance_database is not None and date_format is not None and bank is not None:
-            # convert in csv file
+            # convert pdf to csv file
             if finance_database.type == 'application/pdf':
-                finance_database = main(finance_database)
+                finance_database = converter.main(finance_database)
 
             st.session_state.df = pd.read_csv(finance_database)
             st.session_state.date_format = date_format
@@ -40,30 +40,9 @@ if not st.session_state.button_validator:
         else:
             st.error('Please upload a file and choose a date format')
 else:
-    df = st.session_state.df
-
-    if st.session_state.bank == 'Caixa':
-        # 4 vars -> date, value, category, income_expense
-        date = 'Data'
-        value = 'Valor'
-        category = 'Favorecido'
-        income_expense = 'Income/Expense'
-        is_income = df['Valor'].str.contains('C', na=False)
-        df['Income/Expense'] = is_income.map({True: 'I', False: 'E'})
-
-        df = df.rename(columns={'Data': 'Date', 'Valor': 'Value', 'Favorecido': 'Category'})
-
-        df['Value'] = df['Value'].str.replace('C', '', regex=False).str.replace('D', '', regex=False)
-        df['Value'] = df['Value'].str.replace('.', '')
-        df['Value'] = df['Value'].astype(float) / 100
-
-    elif st.session_state.bank == 'Developer option':
-        df['Income/Expense'] = df['Income/Expense'].replace('Income', 'I')
-        df['Income/Expense'] = df['Income/Expense'].replace('Expense', 'E')
-
-        df = df.rename(columns={'INR': 'Value'})
-
     # define dataframe
+    df = st.session_state.df
+    df = f.bank_format(df, st.session_state.bank)
     df = df[['Date', 'Category', 'Value', 'Income/Expense']]
 
     # add day, month, year
