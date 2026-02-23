@@ -5,119 +5,121 @@ import streamlit as st
 from pdf_to_csv_converter import converter
 import io
 
-if 'button_validator' not in st.session_state:
+# 1 - Add files
+if "button_validator" not in st.session_state:
     st.session_state.button_validator = False
 
-st.title('Finance manager', text_alignment='center', anchor=False)
+st.title("Finance manager", text_alignment="center", anchor=False)
 
 if not st.session_state.button_validator:
-    finance_database = st.file_uploader(label="Upload your csv finance file (if it's a pdf file, we will convert to csv)", type=['csv', 'pdf']
+    finance_database = st.file_uploader(
+        label="Upload your csv finance file (if its a pdf file, we will convert to csv", 
+        type=["csv", "pdf"]
     )
     date_format = st.selectbox(
-        'Choose the file date format', 
-        options=['dd/mm/yyyy', 'mm/dd/yyyy'],
+        "Choose the file date format", 
+        options=["dd/mm/yyyy", "mm/dd/yyyy"],
         index=None,
-        placeholder='Choose the file date format'
+        placeholder="Choose the file date format"
     )
     bank = st.selectbox(
-        'Choose your bank',
-        options=['Caixa', 'Developer option'],
+        "Choose your bank",
+        options=["Caixa", "Developer option"],
         index=None,
-        placeholder='Choose the file date format'
+        placeholder="Choose the file date format"
     )
 
-    if st.button('Continue'):
+    if st.button("Continue"):
         # test if all fields are filled in
         if finance_database is not None and date_format is not None and bank is not None:
             # convert pdf to csv file
-            if finance_database.type == 'application/pdf':
+            if finance_database.type == "application/pdf":
                 finance_database = io.StringIO(converter.main(finance_database))
 
             st.session_state.df = pd.read_csv(finance_database)
-            print(st.session_state.df)
             st.session_state.date_format = date_format
             st.session_state.bank = bank
             st.session_state.button_validator = True
             st.rerun()
         else:
-            st.error('Please upload a file and choose a date format')
+            st.error("Please upload a file and choose a date format")
 else:
+    # 2 - Threating datas
     # define dataframe
     df = st.session_state.df
     df = f.bank_format(df, st.session_state.bank)
-    df = df[['Date', 'Category', 'Value', 'Income/Expense']]
+    df = df[["Date", "Category", "Value", "Income/Expense"]]
 
     # add day, month, year
-    df['Day'] = ''
-    df['Month'] = ''
-    df['Year'] = ''
-    for i, date in enumerate(df['Date']):
+    df["Day"] = ""
+    df["Month"] = ""
+    df["Year"] = ""
+    for i, date in enumerate(df["Date"]):
         date = str(date)
         dmy = f.format_date(date, st.session_state.date_format)
 
-        date = f'{dmy[0]}/{dmy[1]}/{dmy[2]}'
-        df.at[i, 'Date'] = date
+        date = f"{dmy[0]}/{dmy[1]}/{dmy[2]}"
+        df.at[i, "Date"] = date
         
-        df.at[i, 'Day'] = dmy[0]
-        df.at[i, 'Month'] = dmy[1]
-        df.at[i, 'Year'] = dmy[2]
+        df.at[i, "Day"] = dmy[0]
+        df.at[i, "Month"] = dmy[1]
+        df.at[i, "Year"] = dmy[2]
 
     # total expenses
-    total_expenses = df.loc[df['Income/Expense'] == 'E']['Value'].sum()
+    total_expenses = df.loc[df["Income/Expense"] == "E"]["Value"].sum()
 
     # daily expenses average
-    expenses_count = df.value_counts(df['Income/Expense'])['E']
+    expenses_count = df.value_counts(df["Income/Expense"])["E"]
     expenses_daily_average = total_expenses / expenses_count
 
     # Daily expenses chart
-    dfdate = df[['Date', 'Day', 'Month', 'Year', 'Value']].groupby(['Day', 'Month', 'Year', 'Date'])['Value'].sum().reset_index()
-    dfdate = dfdate.sort_values(['Year', 'Month', 'Day']).reset_index(drop='index')
-    chart_daily_expenses = px.histogram(dfdate, title='Daily expenses', x='Date', y='Value', text_auto=True)
+    dfdate = df[["Date", "Day", "Month", "Year", "Value"]].groupby(["Day", "Month", "Year", "Date"])["Value"].sum().reset_index()
+    dfdate = dfdate.sort_values(["Year", "Month", "Day"]).reset_index(drop="index")
+    chart_daily_expenses = px.histogram(dfdate, title="Daily expenses", x="Date", y="Value", text_auto=True)
 
     # Incomes X Expenses
-    chart_incomes_expenses = px.pie(df, names='Income/Expense', title='Expenses x Incomes', values='Value')
+    chart_incomes_expenses = px.pie(df, names="Income/Expense", title="Expenses x Incomes", values="Value")
 
     # Invested categories
-    dfcategory_expense = df.drop(df[df['Income/Expense'] == 'I'].index).reset_index(drop='index')
-    dfcategory_expense = dfcategory_expense[['Category', 'Value']]
-    dfcategory_expense = dfcategory_expense.groupby('Category').sum()
-    dfcategory_expense = dfcategory_expense.sort_values('Value', ascending=False)
+    dfcategory_expense = df.drop(df[df["Income/Expense"] == "I"].index).reset_index(drop="index")
+    dfcategory_expense = dfcategory_expense[["Category", "Value"]]
+    dfcategory_expense = dfcategory_expense.groupby("Category").sum()
+    dfcategory_expense = dfcategory_expense.sort_values("Value", ascending=False)
 
     # Threating values to exhibition
-    dfcategory_expense = dfcategory_expense['Value'].apply(lambda x: f.exhibition_format(x))
+    dfcategory_expense = dfcategory_expense["Value"].apply(lambda x: f.exhibition_format(x))
 
-    # ---
-    # Exhibit
+    # 3 - Exhibit
     container_total_money = st.container(border=True)
-    container_total_money.caption('The total volume of transactions', text_alignment='center')
-    container_total_money.header(f.exhibition_format(total_expenses), anchor=False, text_alignment='center')
+    container_total_money.caption("The total volume of transactions", text_alignment="center")
+    container_total_money.header(f.exhibition_format(total_expenses), anchor=False, text_alignment="center")
     container_total_money.divider()
-    container_total_money.caption('Average of transaction volume/total days', text_alignment='center')
-    container_total_money.subheader(f.exhibition_format(expenses_daily_average), anchor=False, text_alignment='center')
+    container_total_money.caption("Average of transaction volume/total days", text_alignment="center")
+    container_total_money.subheader(f.exhibition_format(expenses_daily_average), anchor=False, text_alignment="center")
 
-    st.space('large')
+    st.space("large")
 
-    st.subheader('Charts', text_alignment='center')
-    tab1, tab2 = st.tabs(tabs=['Daily expenses', 'Expenses X Incomes'])
+    st.subheader("Charts", text_alignment="center")
+    tab1, tab2 = st.tabs(tabs=["Daily expenses", "Expenses X Incomes"])
     with tab1:
         st.plotly_chart(chart_daily_expenses)
     with tab2:
         st.plotly_chart(chart_incomes_expenses)
 
-    st.space('large')
+    st.space("large")
 
-    st.subheader('Most spent categories', text_alignment='center')
+    st.subheader("Most spent categories", text_alignment="center")
     st.dataframe(
         dfcategory_expense, 
-        width='stretch'
+        width="stretch"
     )
 
-    st.space('large')
+    st.space("large")
 
-    if st.button('Analyze next'):
+    if st.button("Analyze next"):
         st.session_state.button_validator = False
 
-        if 'df' in st.session_state:
+        if "df" in st.session_state:
             del st.session_state.df
 
         st.rerun()
